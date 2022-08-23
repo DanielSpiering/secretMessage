@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -44,37 +44,42 @@ namespace secretMessage {
                 _ImageFilePath = openFileDialog.FileName;
                                       
             }//end if
+
+            if (_ImageFilePath!=null) {
+                //read all line of file and store to a string array
+                _p3Array = File.ReadAllLines(_ImageFilePath);
+
+                ReadHeaders();
+
+                if (_idHeader == "P3") {//for a P3 file
+
+                    SetP3Pixels();
+
+                    LoadImage();
+
+                }//end if
+                if (_idHeader == "P6") {//for a P6 file
+                                        //read all bytes from the file and store to a byte array
+                    _p6Array = File.ReadAllBytes(_ImageFilePath);
+
+                    SetP6Pixels();
+
+                    LoadImage();
+
+                }//end if      
+
+                //once image is loaded various boxes appear on the form
+                if (imgLoadedImage.IsLoaded) {
+                    lblEncodedMessage.Visibility = Visibility.Visible;
+                    txtEncodedMessage.Visibility = Visibility.Visible;
+                    lblCharacterCount.Visibility = Visibility.Visible;
+                    lblCharacterCountLabel.Visibility = Visibility.Visible;
+                    btnEncode.Visibility = Visibility.Visible;
+                }//end if
+            } else {
+
+            }
             
-            //read all line of file and store to a string array
-            _p3Array = File.ReadAllLines(_ImageFilePath);
-
-            ReadHeaders();
-                       
-            if (_idHeader == "P3") {//for a P3 file
-
-                SetP3Pixels();
-
-                LoadImage();
-       
-            }//end if
-            if (_idHeader == "P6") {//for a P6 file
-                //read all bytes from the file and store to a byte array
-                _p6Array = File.ReadAllBytes(_ImageFilePath);
-
-                SetP6Pixels();
-
-                LoadImage();
-
-            }//end if      
-            
-            //once image is loaded various boxes appear on the form
-            if (imgLoadedImage.IsLoaded) {
-                lblEncodedMessage.Visibility = Visibility.Visible;
-                txtEncodedMessage.Visibility = Visibility.Visible; 
-                lblCharacterCount.Visibility = Visibility.Visible;
-                lblCharacterCountLabel.Visibility = Visibility.Visible;
-                btnEncode.Visibility=Visibility.Visible;
-            }//end if
         }//end LoadImage Click Event
         private void Encode_Click(object sender, RoutedEventArgs e) {
             Encode();
@@ -132,15 +137,17 @@ namespace secretMessage {
                 }//end for
             }//end for
         }//end SetP3Pixels
-        private void VerifyTextBox() {
+        private bool VerifyTextBox() {
             _secretMessage = txtEncodedMessage.Text;
-            if (_secretMessage.Length > 255) {
-                throw new Exception("Your message is too long. Max length is 256 characters");
+            if (_secretMessage.Length > 256) {                
+                MessageBoxResult result = MessageBox.Show("Your message is too long. Max length is 256 characters");
+                return false;
             }//end if
             if (_height * _width < _secretMessage.Length * 3) {
-                throw new Exception("Your messgae is too big to fit in this image");
+                MessageBoxResult result = MessageBox.Show("Your messgae is too big to fit in this image");
+                return false;
             }//end if
-            
+            return true;
         }//end VerifyTextBox      
         private void ReadHeaders() {
                      
@@ -208,40 +215,42 @@ namespace secretMessage {
             lblCharacterCount.Content = charCount;
         }//end event
         private void Encode() {
-            VerifyTextBox();
+            if (VerifyTextBox() == true) {
+                if (_idHeader == "P3") {
+                    //set starting point of message
+                    int j = _p3Array.Length - 2;
 
-            if (_idHeader == "P3") {
-                //set starting point of message
-                int j = _p3Array.Length - 1;
+                    //place each character in the message
+                    for (int index = 0; index < _secretMessage.Length; index++) {
+                        int character = (int)_secretMessage[index];
+                        _p3Array[j] = character.ToString();
+                        j -= 9;
+                    }//end for
 
-                //place each character in the message
-                for (int index = 0; index < _secretMessage.Length; index++) {
-                    int character = (int)_secretMessage[index];
-                    _p3Array[j] = character.ToString();
-                    j -= 9;
-                }//end for
+                    SetP3Pixels();
 
-                SetP3Pixels();
+                    LoadEncodedImage();
 
-                LoadEncodedImage();
+                }//end if
+                if (_idHeader == "P6") {
+                    //set starting point of message
+                    int j = _p6Array.Length - 2;
 
-            }//end if
-            if (_idHeader == "P6") {
-                //set starting point of message
-                int j = _p6Array.Length - 1;
+                    //place each character in the message
+                    for (int index = 0; index < _secretMessage.Length; index++) {
+                        int character = (int)_secretMessage[index];
+                        _p6Array[j] = (byte)character;
+                        j -= 9;
+                    }//end for
 
-                //place each character in the message
-                for (int index = 0; index < _secretMessage.Length; index++) {
-                    int character = (int)_secretMessage[index];
-                    _p6Array[j] = (byte)character;
-                    j -= 9;
-                }//end for
+                    SetP6Pixels();
 
-                SetP6Pixels();
+                    LoadEncodedImage();
 
-                LoadEncodedImage();
+                }//end if
+            } else {
 
-            }//end if
+            }                     
         }//end Encode
         
     }//end class
